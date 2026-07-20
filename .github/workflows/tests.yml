@@ -10,6 +10,9 @@ on:
       - master
       - production
 
+permissions:
+  contents: write
+
 jobs:
   phpunit:
     name: PHPUnit
@@ -64,3 +67,44 @@ jobs:
         env:
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: 6379
+
+  # Entrega em production com CI verde vira versão sozinha. A versão nunca é
+  # escrita à mão: nem no commit, nem no composer.json — sai da última tag.
+  release:
+    name: Release
+    needs: phpunit
+    if: github.ref == 'refs/heads/production'
+    runs-on: ubuntu-latest
+
+    # Serializa pushes seguidos; dois jobs simultâneos calculariam a mesma tag.
+    concurrency:
+      group: release
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: bump
+        name: Compute next tag
+        run: |
+          last=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          if [ -z "$last" ]; then
+            next="v1.0.0"
+          else
+            IFS=. read -r maj min pat <<< "${last#v}"
+            next="v$maj.$min.$((pat + 1))"
+          fi
+          echo "tag=$next" >> "$GITHUB_OUTPUT"
+
+      # ponytail: sempre patch. Para subir minor/major, criar a tag na mão uma
+      # vez (git tag v1.1.0 && git push origin v1.1.0) — o cálculo segue dela.
+      - name: Create tag and release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.bump.outputs.tag }}" \
+            --target "$GITHUB_SHA" \
+            --title "${{ steps.bump.outputs.tag }}" \
+            --generate-notes
