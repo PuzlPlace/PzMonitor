@@ -14,19 +14,6 @@ todos do framework. Nenhum primitivo de concorrência é reimplementado no pacot
 > configuração, limites e integração Laravel.
 > Fonte: [`docs/index.html`](docs/index.html).
 
-### Publicar no GitHub Pages (uma vez no repositório)
-
-O workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) só consegue
-publicar depois que o Pages estiver ligado no GitHub:
-
-1. Abra **Settings → Pages** do repositório:
-   [github.com/PuzlPlace/PzMonitor/settings/pages](https://github.com/PuzlPlace/PzMonitor/settings/pages)
-2. Em **Build and deployment → Source**, escolha **GitHub Actions** (não “Deploy from a branch”).
-3. Rode o deploy: **Actions → Documentation (GitHub Pages) → Run workflow**, ou faça um
-   push em `main` que altere `docs/**`.
-
----
-
 ## Requisitos
 
 - PHP `^8.1`
@@ -308,7 +295,7 @@ return [
 | Variável | Padrão | Descrição |
 |----------|--------|-----------|
 | `PZMONITOR_STORE` | `null` | Store de cache dos locks. `null` usa o store padrão da aplicação. Em produção deve resolver para um backend compartilhado (Redis). |
-| `PZMONITOR_PREFIX` | `pzmonitor:` | Prefixo aplicado a toda chave, garantindo que as chaves do PzMonitor nunca colidam com as do Monitor v1 da aplicação. |
+| `PZMONITOR_PREFIX` | `pzmonitor:` | Prefixo aplicado a toda chave, garantindo que as chaves do PzMonitor nunca colidam com outras chaves da aplicação. |
 | `PZMONITOR_WAIT_TIMEOUT` | `60` | Segundos que `lock()` e `acquire()` esperam antes de lançar timeout. |
 | `PZMONITOR_LOCK_TTL` | `300` | Segundos até o cache expirar a chave sozinho, sem `release()`. |
 
@@ -346,8 +333,6 @@ PzMonitor::lock('fechamento-mensal', $callback, lockTtlInSeconds: 1800); // venc
   single-instance, dupla aquisição é raramente possível
   ([Kleppmann](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html)).
   Aceitável para os usos atuais; fluxos correção-críticos exigem outra abordagem.
-- **Não configure `lock_connection`** em `config/cache.php` enquanto existir call site
-  do Monitor v1 na aplicação — o v1 depende da colisão de chave na conexão `cache`.
 
 ### Fora do escopo (upgrade path, sem prazo)
 
@@ -359,8 +344,7 @@ parte desta versão.
 
 ## Exceptions
 
-Todas em `Puzl\PzMonitor\Exception\`. As mensagens são idênticas às do Monitor v1
-(em inglês) — telas e logs da aplicação consumidora dependem desses textos.
+Todas em `Puzl\PzMonitor\Exception\`. Telas e logs da aplicação consumidora dependem desses textos.
 
 | Exception | Quando | Mensagem |
 |-----------|--------|----------|
