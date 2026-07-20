@@ -1,0 +1,68 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - production
+  pull_request:
+    branches:
+      - main
+      - master
+      - production
+
+jobs:
+  phpunit:
+    name: PHPUnit
+    runs-on: ubuntu-latest
+
+    # A suíte de integração exige um backend compartilhado de verdade. Sem
+    # este serviço ela se pula sozinha e o CI ficaria verde sem nunca ter
+    # verificado a exclusão mútua entre processos.
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, dom
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run tests
+        run: composer test
+        env:
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
+
+      # Rede de segurança: o teste de integração se pula sozinho quando não
+      # alcança o Redis. Sem esta checagem, um serviço quebrado passaria
+      # despercebido como suíte verde.
+      - name: Fail if integration suite was skipped
+        run: vendor/bin/phpunit -c phpunit.xml.dist --testsuite Integration --fail-on-skipped
+        env:
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379

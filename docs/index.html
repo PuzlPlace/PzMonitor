@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="PzMonitor — lock distribuído para Laravel sobre Cache::lock, com API de monitor por chave única.">
+  <title>PzMonitor — Guia da biblioteca</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #0d9488;
+      --accent-hover: #0f766e;
+      --accent-soft: #ccfbf1;
+      --code-bg: #1e293b;
+      --code-text: #e2e8f0;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --danger-bg: #fef2f2;
+      --danger-border: #ef4444;
+      --success-bg: #ecfdf5;
+      --success-border: #10b981;
+      --info-bg: #eff6ff;
+      --info-border: #3b82f6;
+      --sidebar-w: 260px;
+      --radius: 10px;
+      --shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.04);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 5rem;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 1.05rem;
+      line-height: 1.65;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    /* Layout */
+    .layout {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem 0;
+    }
+
+    .sidebar-brand {
+      padding: 0 1.25rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+
+    .sidebar-brand h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-brand p {
+      margin: 0.25rem 0 0;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .nav-group {
+      margin-bottom: 0.5rem;
+    }
+
+    .nav-group-title {
+      padding: 0.5rem 1.25rem 0.25rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .sidebar a {
+      display: block;
+      padding: 0.35rem 1.25rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .main {
+      max-width: 52rem;
+      padding: 2.5rem 3rem 4rem;
+    }
+
+    /* Hero */
+    .hero {
+      margin-bottom: 3rem;
+      padding: 2.5rem;
+      background: linear-gradient(135deg, #0d9488 0%, #115e59 100%);
+      border-radius: var(--radius);
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .hero h2 {
+      margin: 0 0 0.75rem;
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+    }
+
+    .hero p {
+      margin: 0;
+      font-size: 1.1rem;
+      opacity: 0.92;
+      max-width: 36rem;
+    }
+
+    .hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+    }
+
+    .tag {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.65rem;
+      background: rgba(255,255,255,0.2);
+      border-radius: 999px;
+    }
+
+    /* Typography */
+    section { margin-bottom: 3rem; }
+
+    h2 {
+      font-size: 1.65rem;
+      font-weight: 700;
+      margin: 0 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--accent-soft);
+      letter-spacing: -0.02em;
+    }
+
+    h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin: 1.75rem 0 0.75rem;
+      color: var(--text);
+    }
+
+    h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 1.25rem 0 0.5rem;
+    }
+
+    p { margin: 0 0 1rem; }
+
+    ul, ol {
+      margin: 0 0 1rem;
+      padding-left: 1.35rem;
+    }
+
+    li { margin-bottom: 0.35rem; }
+
+    a { color: var(--accent); }
+    a:hover { color: var(--accent-hover); }
+
+    strong { font-weight: 600; }
+
+    /* Cards */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1.25rem 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card h4 {
+      margin: 0 0 0.5rem;
+      font-size: 0.95rem;
+      color: var(--accent);
+    }
+
+    .card p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    /* Callouts */
+    .callout {
+      border-radius: var(--radius);
+      padding: 1rem 1.15rem;
+      margin: 1.25rem 0;
+      border-left: 4px solid;
+      font-size: 0.95rem;
+    }
+
+    .callout-title {
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      font-size: 0.9rem;
+    }
+
+    .callout-warn { background: var(--warn-bg); border-color: var(--warn-border); }
+    .callout-danger { background: var(--danger-bg); border-color: var(--danger-border); }
+    .callout-success { background: var(--success-bg); border-color: var(--success-border); }
+    .callout-info { background: var(--info-bg); border-color: var(--info-border); }
+
+    /* Code */
+    pre {
+      margin: 1rem 0;
+      padding: 1.15rem 1.25rem;
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: var(--radius);
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      box-shadow: var(--shadow);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88em;
+      background: #f1f5f9;
+      color: #0f766e;
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+    }
+
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      font-size: inherit;
+    }
+
+    .kw { color: #c084fc; }
+    .fn { color: #67e8f9; }
+    .str { color: #86efac; }
+    .cmt { color: #94a3b8; font-style: italic; }
+    .cls { color: #fcd34d; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    th, td {
+      padding: 0.65rem 0.9rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #f1f5f9;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    /* Compare columns */
+    .vs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .vs-box {
+      padding: 1rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .vs-box.yes { border-color: var(--success-border); }
+    .vs-box.no { border-color: var(--danger-border); }
+
+    .vs-box h4 { margin-top: 0; }
+
+    /* API method list */
+    .method {
+      margin: 1.5rem 0;
+      padding: 1rem 1.15rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .method-sig {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--accent);
+      font-weight: 500;
+      word-break: break-all;
+    }
+
+    .method-desc {
+      margin: 0.5rem 0 0;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    /* Mobile */
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      bottom: 1.25rem;
+      right: 1.25rem;
+      z-index: 100;
+      width: 3rem;
+      height: 3rem;
+      border: none;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 1.25rem;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(13, 148, 136, 0.4);
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar {
+        position: fixed;
+        left: -100%;
+        z-index: 50;
+        width: var(--sidebar-w);
+        transition: left 0.25s;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.1);
+      }
+      .sidebar.open { left: 0; }
+      .main { padding: 1.5rem 1.25rem 5rem; max-width: none; }
+      .menu-toggle { display: flex; align-items: center; justify-content: center; }
+      .vs-grid { grid-template-columns: 1fr; }
+      .hero { padding: 1.5rem; }
+      .hero h2 { font-size: 1.5rem; }
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+<button class="menu-toggle" type="button" aria-label="Abrir menu" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+
+<div class="layout">
+  <nav class="sidebar" aria-label="Navegação">
+    <div class="sidebar-brand">
+      <h1>PzMonitor</h1>
+      <p>puzl/pzmonitor · PHP 8.1+</p>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Começar</div>
+      <a href="#intro">O que é</a>
+      <a href="#faz-nao-faz">O que faz / não faz</a>
+      <a href="#instalacao">Instalação</a>
+      <a href="#inicio-rapido">Início rápido</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">API</div>
+      <a href="#lock">lock()</a>
+      <a href="#trylock">tryLock()</a>
+      <a href="#trylockmany">tryLockMany()</a>
+      <a href="#acquire">acquire()</a>
+      <a href="#tryacquire">tryAcquire()</a>
+      <a href="#forcerelease">forceRelease()</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Laravel</div>
+      <a href="#laravel">Integração Laravel</a>
+      <a href="#config">Configuração</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Referência</div>
+      <a href="#excecoes">Exceções</a>
+      <a href="#limites">Limites e avisos</a>
+      <a href="#boas-praticas">Boas práticas</a>
+      <a href="#testes">Testes</a>
+      <a href="#faq">FAQ</a>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <header class="hero">
+      <h2>Lock distribuído para Laravel, com uma chave e uma seção crítica</h2>
+      <p>PzMonitor é um wrapper fino e estático sobre <code>Cache::lock</code>: garante que apenas um processo execute um trecho por vez, libera o lock sempre e mantém as mensagens de erro que a aplicação já conhece.</p>
+      <div class="hero-tags">
+        <span class="tag">Cache::lock</span>
+        <span class="tag">Redis</span>
+        <span class="tag">100% estático</span>
+        <span class="tag">Owner-safe</span>
+        <span class="tag">Zero primitivo reimplementado</span>
+      </div>
+    </header>
+
+    <!-- INTRO -->
+    <section id="intro">
+      <h2>O que é o PzMonitor?</h2>
+      <p>O PzMonitor implementa <strong>exclusão mútua distribuída</strong> sobre o lock de cache do Laravel. A API é a de um monitor por chave única: você nomeia um processo por uma chave única e o pacote garante que apenas um executor entre por vez, entre processos, filas e máquinas.</p>
+
+      <div class="cards">
+        <div class="card">
+          <h4>Nada reimplementado</h4>
+          <p>Aquisição atômica, owner token e liberação condicionada ao dono são todos do framework (<code>RedisLock</code>).</p>
+        </div>
+        <div class="card">
+          <h4>Liberação garantida</h4>
+          <p>Os métodos com callback liberam o lock em <code>finally</code> — mesmo quando o callback lança exceção.</p>
+        </div>
+        <div class="card">
+          <h4>Perdedor não atrapalha</h4>
+          <p>Quem falha na aquisição (busy ou timeout) nunca libera nem invalida o lock do processo detentor.</p>
+        </div>
+        <div class="card">
+          <h4>Laravel pronto</h4>
+          <p>Auto-discovery do Service Provider, config publicável e prefixo de chave próprio (<code>pzmonitor:</code>).</p>
+        </div>
+      </div>
+
+      <p>O ponto de entrada é sempre a classe estática:</p>
+<pre><code><span class="kw">use</span> <span class="cls">Puzl\PzMonitor\PzMonitor</span>;
+
+<span class="fn">PzMonitor</span>::<span class="fn">lock</span>(<span class="str">'emissao-nfe:1234'</span>, <span class="kw">fn</span> () => $this-><span class="fn">emitirNfe</span>(<span class="str">1234</span>));</code></pre>
+    </section>
+
+    <!-- FAZ / NÃO FAZ -->
+    <section id="faz-nao-faz">
+      <h2>O que faz e o que não faz</h2>
+
+      <div class="vs-grid">
+        <div class="vs-box yes">
+          <h4>✓ O PzMonitor faz</h4>
+          <ul>
+            <li>Seção crítica com espera (<code>lock</code>) ou falha rápida (<code>tryLock</code>)</li>
+            <li>Lote multi-chave all-or-nothing com ordem fixa (<code>tryLockMany</code>)</li>
+            <li>Handle cru do lock para casos que não cabem em callback (<code>acquire</code>, <code>tryAcquire</code>)</li>
+            <li>Liberação administrativa de chave presa (<code>forceRelease</code>)</li>
+            <li>Prefixo de chave configurável, isolando o Monitor da aplicação</li>
+            <li>Store de cache configurável (<code>PZMONITOR_STORE</code>)</li>
+            <li>Exceções tipadas com a chave do processo em propriedade readonly</li>
+          </ul>
+        </div>
+        <div class="vs-box no">
+          <h4>✗ O PzMonitor não faz</h4>
+          <ul>
+            <li><strong>Renovar o TTL</strong> — não há watchdog; callback mais longo que o TTL perde o lock</li>
+            <li><strong>Reentrância</strong> — lock aninhado na mesma chave bloqueia até o timeout</li>
+            <li><strong>Fencing tokens / Redlock multi-nó</strong> — é lock de eficiência, não de correção absoluta</li>
+            <li><strong>Condition variables</strong> (<code>Wait</code>/<code>Pulse</code>) — esse papel é das queues e events do Laravel</li>
+            <li><strong>Excluir sem cache compartilhado</strong> — <code>array</code> e <code>file</code> local não excluem entre máquinas</li>
+            <li><strong>Métricas e eventos</strong> — fora do escopo desta versão</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- INSTALAÇÃO -->
+    <section id="instalacao">
+      <h2>Instalação</h2>
+<pre><code>composer require puzl/pzmonitor</code></pre>
+      <p>Repositório público, como os demais pacotes <code>Pz*</code>: declare o VCS no <code>composer.json</code> da aplicação antes do <code>require</code>. O <strong>auto-discovery</strong> registra o <code>PzMonitorServiceProvider</code> automaticamente — nenhuma configuração manual é obrigatória.</p>
+
+      <h3>Requisitos</h3>
+      <ul>
+        <li>PHP <code>^8.1</code></li>
+        <li><code>illuminate/cache</code> e <code>illuminate/support</code> <code>^10|^11|^12</code></li>
+        <li>Backend de cache <strong>compartilhado</strong> (Redis) em produção</li>
+      </ul>
+    </section>
+
+    <!-- INÍCIO RÁPIDO -->
+    <section id="inicio-rapido">
+      <h2>Início rápido</h2>
+      <p>Escolha o método pelo que deve acontecer quando a chave já estiver ocupada:</p>
+
+      <table>
+        <thead>
+          <tr><th>Situação</th><th>Método</th><th>Chave ocupada</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Pode esperar a vez</td><td><code>lock()</code></td><td>Espera; estourou o timeout → <code>PzMonitorTimeoutException</code></td></tr>
+          <tr><td>Não pode esperar</td><td><code>tryLock()</code></td><td><code>PzMonitorBusyException</code> imediata</td></tr>
+          <tr><td>Precisa de várias chaves</td><td><code>tryLockMany()</code></td><td>Rollback das adquiridas + <code>PzMonitorBusyException</code></td></tr>
+          <tr><td>Seção não cabe em callback</td><td><code>acquire()</code> / <code>tryAcquire()</code></td><td>Igual a <code>lock()</code> / <code>tryLock()</code>; você libera em <code>finally</code></td></tr>
+          <tr><td>Destravar chave presa (suporte)</td><td><code>forceRelease()</code></td><td>Libera ignorando o dono</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-info">
+        <div class="callout-title">Convenção de chave</div>
+        Use um identificador estável e específico do processo: <code>"emissao-nfe:{$pedidoId}"</code>, <code>"sincronizacao-estoque:{$lojaId}"</code>. O prefixo <code>pzmonitor:</code> é aplicado automaticamente.
+      </div>
+    </section>
+
+    <!-- API: lock -->
+    <section id="lock">
+      <h2>API — <code>lock()</code></h2>
+
+      <div class="method">
+        <div class="method-sig">PzMonitor::lock(string $uniqueProcessKey, callable $callback, ?int $waitTimeoutInSeconds = null, ?int $lockTtlInSeconds = null): mixed</div>
+        <p class="method-desc">Seção crítica com espera. Executa o callback com exclusividade e libera o lock sempre — inclusive quando o callback lança exceção. Retorna o valor do callback.</p>
+      </div>
+
+<pre><code><span class="kw">use</span> <span class="cls">Puzl\PzMonitor\Exception\PzMonitorTimeoutException</span>;
+<span class="kw">use</span> <span class="cls">Puzl\PzMonitor\PzMonitor</span>;
+
+<span class="kw">try</span> {
+    $nota = <span class="fn">PzMonitor</span>::<span class="fn">lock</span>(
+        uniqueProcessKey: <span class="str">"emissao-nfe:{$pedidoId}"</span>,
+        callback: <span class="kw">fn</span> () => $this-><span class="fn">emitirNfe</span>($pedidoId),
+        waitTimeoutInSeconds: <span class="str">60</span>,   <span class="cmt">// omitido = config wait_timeout (padrão 60)</span>
+        lockTtlInSeconds: <span class="str">300</span>,      <span class="cmt">// omitido = config lock_ttl (padrão 300)</span>
+    );
+} <span class="kw">catch</span> (<span class="cls">PzMonitorTimeoutException</span> $e) {
+    <span class="cmt">// Espera esgotada: o callback NÃO executou e o lock do dono ficou intacto.</span>
+    <span class="fn">report</span>($e);
+}</code></pre>
+
+      <div class="callout callout-warn">
+        <div class="callout-title">Espera exata</div>
+        A espera máxima é <code>$waitTimeoutInSeconds</code> exato, com retry interno de 250&nbsp;ms do framework.
+      </div>
+    </section>
+
+    <!-- API: tryLock -->
+    <section id="trylock">
+      <h2>API — <code>tryLock()</code></h2>
+
+      <div class="method">
+        <div class="method-sig">PzMonitor::tryLock(string $uniqueProcessKey, callable $callback, ?int $lockTtlInSeconds = null): mixed</div>
+        <p class="method-desc">Seção crítica com falha rápida: chave ocupada lança <code>PzMonitorBusyException</code> imediatamente e o callback não executa.</p>
+      </div>
+
+<pre><code><span class="kw">use</span> <span class="cls">Puzl\PzMonitor\Exception\PzMonitorBusyException</span>;
+<span class="kw">use</span> <span class="cls">Puzl\PzMonitor\PzMonitor</span>;
+
+<span class="kw">try</span> {
+    <span class="fn">PzMonitor</span>::<span class="fn">tryLock</span>(
+        uniqueProcessKey: <span class="str">"sincronizacao-estoque:{$lojaId}"</span>,
+        callback: <span class="kw">fn</span> () => $this-><span class="fn">sincronizarEstoque</span>($lojaId),
+        lockTtlInSeconds: <span class="str">300</span>,      <span class="cmt">// omitido = config lock_ttl (padrão 300)</span>
+    );
+} <span class="kw">catch</span> (<span class="cls">PzMonitorBusyException</span> $e) {
+    <span class="cmt">// Já existe outro processo na mesma chave.</span>
+    <span class="kw">return</span> <span class="fn">response</span>()-><span class="fn">json</span>([<span class="str">'message'</span> => $e-><span class="fn">getMessage</span>()], <span class="str">409</span>);
+}</code></pre>
+    </section>
+
+    <!-- API: tryLockMany -->
+    <section id="trylockmany">
+      <h2>API — <code>tryLockMany()</code></h2>
+
+      <div class="method">
+        <div class="method-sig">PzMonitor::tryLockMany(array $uniqueProcessKeys, callable $callback, ?int $lockTtlInSeconds = null): mixed</div>
+        <p class="method-desc">Seção crítica multi-chave, all-or-nothing. Deduplica as chaves e adquire em ordem lexicográfica fixa (anti-deadlock entre lotes concorrentes). Qualquer chave ocupada: libera as já adquiridas (rollback) e lança busy nomeando a chave conflitante.</p>
+      </div>
+
+      <h3>O problema que ele resolve</h3>
+      <p>
+        Os outros métodos travam <strong>uma</strong> chave. Mas há operações que tocam
+        <strong>duas ou mais entidades ao mesmo tempo</strong>, e travar só uma não protege nada.
+      </p>
+      <p>
+        O caso canônico é a transferência entre contas: <code>transferir(A → B)</code> debita A e credita B.
+        Travando apenas a conta A, nada impede uma transferência <code>X → B</code> simultânea de bagunçar o
+        saldo de B. A operação precisa das <strong>duas</strong> chaves ao mesmo tempo.
+      </p>
+      <p>A tentativa ingênua é aninhar — e é exatamente aqui que nasce o deadlock:</p>
+
+<pre><code><span class="cmt">// NÃO faça isso.</span>
+<span class="fn">PzMonitor</span>::<span class="fn">tryLock</span>(<span class="str">"conta:{$origemId}"</span>, <span class="kw">function</span> () <span class="kw">use</span> ($destinoId) {
+    <span class="fn">PzMonitor</span>::<span class="fn">tryLock</span>(<span class="str">"conta:{$destinoId}"</span>, <span class="kw">fn</span> () => $this-><span class="fn">transferir</span>(...));
+});</code></pre>
+
+      <h3>O deadlock que ele evita</h3>
+      <p>Duas transferências simultâneas, em sentidos opostos:</p>
+
+<pre><code><span class="cmt">Processo 1: transferir(conta:5 → conta:9)     Processo 2: transferir(conta:9 → conta:5)</span>
+  trava conta:5  <span class="str">✓</span>                              trava conta:9  <span class="str">✓</span>
+  quer conta:9 ... ocupada pelo P2               quer conta:5 ... ocupada pelo P1</code></pre>
+
+      <p>
+        Cada um segura o que o outro precisa. Abraço mortal: nenhum dos dois solta, e ambos ficam presos
+        até o TTL expirar.
+      </p>
+      <p>
+        <strong>A solução é a ordem fixa.</strong> O <code>tryLockMany</code> ordena as chaves
+        lexicograficamente antes de adquirir. Assim os dois processos, mesmo pedindo em sentidos opostos,
+        pedem na <strong>mesma ordem</strong>:
+      </p>
+
+<pre><code><span class="cmt">Processo 1: pede [conta:5, conta:9]           Processo 2: pede [conta:5, conta:9]</span>
+  trava conta:5  <span class="str">✓</span>                              tenta conta:5 → OCUPADA → falha limpa
+  trava conta:9  <span class="str">✓</span>
+  transfere</code></pre>
+
+      <p>
+        Um ganha; o outro leva <code>PzMonitorBusyException</code> <strong>na hora</strong>, sem ter travado
+        nada. Deadlock impossível por construção — o <code>sort()</code> não é estética, é o mecanismo.
+      </p>
+
+      <h3>All-or-nothing: o rollback</h3>
+      <p>O callback só executa com o <strong>conjunto completo</strong> na mão:</p>
+
+<pre><code><span class="cmt">pede [conta:5, conta:9, conta:12]</span>
+  conta:12  <span class="str">✓</span> adquirida     <span class="cmt">// ordem de string: "conta:12" &lt; "conta:5" &lt; "conta:9"</span>
+  conta:5   <span class="str">✓</span> adquirida
+  conta:9   <span class="str">✗</span> ocupada  →  libera conta:12 e conta:5, lança busy nomeando "conta:9"</code></pre>
+
+      <p>
+        Sem esse rollback sobrariam duas chaves órfãs presas até o TTL, bloqueando outras operações à toa.
+        O <code>finally</code> do método cobre os dois caminhos: o rollback da aquisição parcial
+        <strong>e</strong> a liberação normal após o callback (inclusive quando o callback lança exceção).
+      </p>
+
+      <div class="callout callout-info">
+        <div class="callout-title">A ordem não é a que você escreveu</div>
+        No exemplo acima <code>conta:12</code> vem antes de <code>conta:5</code> porque a comparação é
+        <strong>de string</strong>, não numérica. Isso não afeta a correção — o que importa é que todos os
+        processos usem o mesmo critério — mas explica por que a ordem de aquisição difere da ordem do array.
+      </div>
+
+      <h3>Deduplicação</h3>
+      <p>
+        <code>["conta:5", "conta:5"]</code> significaria travar a mesma chave duas vezes. Como o lock
+        <strong>não é reentrante</strong>, a segunda tentativa encontraria a chave ocupada… pelo próprio
+        processo. Auto-deadlock. O <code>array_unique</code> elimina isso — útil quando as chaves vêm de um
+        loop e origem e destino podem coincidir (transferência de uma conta para ela mesma).
+      </p>
+
+      <h3>Exemplo completo</h3>
+
+<pre><code><span class="kw">use</span> <span class="cls">InvalidArgumentException</span>;
+<span class="kw">use</span> <span class="cls">Puzl\PzMonitor\Exception\PzMonitorBusyException</span>;
+<span class="kw">use</span> <span class="cls">Puzl\PzMonitor\PzMonitor</span>;
+
+<span class="kw">try</span> {
+    <span class="fn">PzMonitor</span>::<span class="fn">tryLockMany</span>(
+        uniqueProcessKeys: [<span class="str">"conta:{$origemId}"</span>, <span class="str">"conta:{$destinoId}"</span>],
+        callback: <span class="kw">fn</span> () => $this-><span class="fn">transferir</span>($origemId, $destinoId, $valor),
+        lockTtlInSeconds: <span class="str">300</span>,      <span class="cmt">// omitido = config lock_ttl (padrão 300)</span>
+    );
+} <span class="kw">catch</span> (<span class="cls">PzMonitorBusyException</span> $e) {
+    <span class="cmt">// $e->uniqueProcessKey → a chave que estava ocupada.</span>
+    <span class="fn">report</span>($e);
+} <span class="kw">catch</span> (<span class="cls">InvalidArgumentException</span> $e) {
+    <span class="cmt">// Lista de chaves vazia.</span>
+    <span class="fn">report</span>($e);
+}</code></pre>
+
+      <div class="callout callout-warn">
+        <div class="callout-title">TTL do lote</div>
+        Um único TTL vale para <strong>todas</strong> as chaves, e o relógio de cada uma começa a correr no
+        momento em que ela é adquirida — não quando o callback começa. Num lote de 50 chaves cujo callback
+        leva 4 minutos, um TTL de 300&nbsp;s fica apertado: as primeiras chaves já gastaram tempo esperando
+        as outras 49 serem travadas. Dimensione pelo <strong>tempo total do lote</strong>, não pelo tempo de
+        processar um item — e como o padrão da config raramente basta para lote, este é o caso típico de
+        passar <code>lockTtlInSeconds</code> explícito.
+      </div>
+
+      <h3>Quando usar cada método</h3>
+      <table>
+        <thead>
+          <tr><th>Situação</th><th>Método</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Uma rotina, uma chave</td><td><code>tryLock()</code> / <code>lock()</code></td></tr>
+          <tr><td>Uma operação que toca N entidades e precisa de todas</td><td><code>tryLockMany()</code></td></tr>
+          <tr><td>Precisa esperar em vez de falhar</td><td><code>lock()</code> — não há versão bloqueante multi-chave</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-info">
+        <div class="callout-title">Por que não existe um <code>lockMany()</code> bloqueante</div>
+        É deliberado. Esperar por múltiplas chaves reintroduz a chance de deadlock que a falha rápida
+        elimina: dois lotes com interseção parcial podem esperar um pelo outro indefinidamente. Se a
+        operação é importante, o padrão é falhar rápido e tentar de novo depois (retry na fila), não
+        esperar segurando locks.
+      </div>
+    </section>
+
+    <!-- API: acquire -->
+    <section id="acquire">
+      <h2>API — <code>acquire()</code></h2>
+
+      <div class="method">
+        <div class="method-sig">PzMonitor::acquire(string $uniqueProcessKey, ?int $waitTimeoutInSeconds = null, ?int $lockTtlInSeconds = null): Illuminate\Contracts\Cache\Lock</div>
+        <p class="method-desc">Aquisição crua bloqueante. Devolve o handle do lock do framework; o caller <strong>deve</strong> liberar em <code>finally</code>.</p>
+      </div>
+
+<pre><code><span class="kw">use</span> <span class="cls">Puzl\PzMonitor\Exception\PzMonitorTimeoutException</span>;
+<span class="kw">use</span> <span class="cls">Puzl\PzMonitor\PzMonitor</span>;
+
+<span class="kw">try</span> {
+    $lock = <span class="fn">PzMonitor</span>::<span class="fn">acquire</span>(
+        uniqueProcessKey: <span class="str">"fechamento-caixa:{$caixaId}"</span>,
+        waitTimeoutInSeconds: <span class="str">60</span>,   <span class="cmt">// omitido = config wait_timeout (padrão 60)</span>
+        lockTtlInSeconds: <span class="str">300</span>,      <span class="cmt">// omitido = config lock_ttl (padrão 300)</span>
+    );
+} <span class="kw">catch</span> (<span class="cls">PzMonitorTimeoutException</span> $e) {
+    <span class="fn">report</span>($e);
+
+    <span class="kw">return</span>;
+}
+
+<span class="kw">try</span> {
+    $this-><span class="fn">fecharCaixa</span>($caixaId);
+} <span class="kw">finally</span> {
+    $lock-><span class="fn">release</span>();
+}</code></pre>
+    </section>
+
+    <!-- API: tryAcquire -->
+    <section id="tryacquire">
+      <h2>API — <code>tryAcquire()</code></h2>
+
+      <div class="method">
+        <div class="method-sig">PzMonitor::tryAcquire(string $uniqueProcessKey, ?int $lockTtlInSeconds = null): Illuminate\Contracts\Cache\Lock</div>
+        <p class="method-desc">Aquisição crua com falha rápida. Chave ocupada lança <code>PzMonitorBusyException</code>; o caller <strong>deve</strong> liberar em <code>finally</code>.</p>
+      </div>
+
+<pre><code><span class="kw">use</span> <span class="cls">Puzl\PzMonitor\Exception\PzMonitorBusyException</span>;
+<span class="kw">use</span> <span class="cls">Puzl\PzMonitor\PzMonitor</span>;
+
+<span class="kw">try</span> {
+    $lock = <span class="fn">PzMonitor</span>::<span class="fn">tryAcquire</span>(<span class="str">"importacao-xml:{$arquivoId}"</span>, lockTtlInSeconds: <span class="str">300</span>);
+} <span class="kw">catch</span> (<span class="cls">PzMonitorBusyException</span> $e) {
+    <span class="fn">report</span>($e);
+
+    <span class="kw">return</span>;
+}
+
+<span class="kw">try</span> {
+    $this-><span class="fn">importar</span>($arquivoId);
+} <span class="kw">finally</span> {
+    $lock-><span class="fn">release</span>();
+}</code></pre>
+
+      <div class="callout callout-info">
+        <div class="callout-title">Prefira o callback</div>
+        <code>lock()</code>, <code>tryLock()</code> e <code>tryLockMany()</code> já liberam o lock em <code>finally</code> internamente. Use o handle cru só quando a seção crítica não couber em um callback.
+      </div>
+    </section>
+
+    <!-- API: forceRelease -->
+    <section id="forcerelease">
+      <h2>API — <code>forceRelease()</code></h2>
+
+      <div class="method">
+        <div class="method-sig">PzMonitor::forceRelease(string $uniqueProcessKey): void</div>
+        <p class="method-desc">Liberação administrativa: ignora o dono do lock. Existe para destravar chave presa por processo morto antes do TTL expirar.</p>
+      </div>
+
+<pre><code><span class="kw">use</span> <span class="cls">Puzl\PzMonitor\PzMonitor</span>;
+
+<span class="cmt">// Ex.: comando artisan de suporte, executado por operação.</span>
+<span class="fn">PzMonitor</span>::<span class="fn">forceRelease</span>(<span class="str">"emissao-nfe:{$pedidoId}"</span>);</code></pre>
+
+      <div class="callout callout-danger">
+        <div class="callout-title">Nunca em fluxo de negócio</div>
+        Se o dono legítimo ainda estiver dentro da seção crítica, <code>forceRelease()</code> quebra a exclusão mútua e deixa dois processos executando o mesmo trecho. Uso exclusivo de operação/suporte.
+      </div>
+    </section>
+
+    <!-- LARAVEL -->
+    <section id="laravel">
+      <h2>Integração Laravel</h2>
+      <p>O <code>PzMonitorServiceProvider</code> é registrado por auto-discovery (declarado em <code>composer.json</code>, <code>extra.laravel.providers</code>). Ele não registra bindings: <code>PzMonitor</code> é estática e lê a config pela Facade <code>Config</code>. O provider apenas:</p>
+      <ul>
+        <li><strong>register()</strong> — mescla <code>config/pzmonitor.php</code> em <code>config('pzmonitor.*')</code>, sem sobrescrever o que a aplicação já definiu.</li>
+        <li><strong>boot()</strong> — registra o <code>publishes</code> com a tag <code>pzmonitor-config</code>, apenas quando rodando em console.</li>
+      </ul>
+
+<pre><code>php artisan vendor:publish --tag=pzmonitor-config</code></pre>
+
+      <p>Exemplo dentro de um job de fila:</p>
+
+<pre><code><span class="kw">use</span> <span class="cls">Puzl\PzMonitor\Exception\PzMonitorBusyException</span>;
+<span class="kw">use</span> <span class="cls">Puzl\PzMonitor\PzMonitor</span>;
+
+<span class="kw">class</span> <span class="cls">SincronizarEstoqueJob</span> <span class="kw">implements</span> <span class="cls">ShouldQueue</span>
+{
+    <span class="kw">public function</span> <span class="fn">handle</span>(): <span class="kw">void</span>
+    {
+        <span class="kw">try</span> {
+            <span class="fn">PzMonitor</span>::<span class="fn">tryLock</span>(<span class="str">"sincronizacao-estoque:{$this->lojaId}"</span>, <span class="kw">fn</span> () => $this-><span class="fn">sincronizar</span>());
+        } <span class="kw">catch</span> (<span class="cls">PzMonitorBusyException</span> $e) {
+            <span class="cmt">// Outra execução já está sincronizando esta loja: descarta silenciosamente.</span>
+            $this-><span class="fn">delete</span>();
+        }
+    }
+}</code></pre>
+    </section>
+
+    <!-- CONFIG -->
+    <section id="config">
+      <h2>Configuração (<code>config/pzmonitor.php</code>)</h2>
+
+<pre><code><span class="kw">return</span> [
+    <span class="str">'store'</span>        => <span class="fn">env</span>(<span class="str">'PZMONITOR_STORE'</span>),                <span class="cmt">// null = store padrão da app</span>
+    <span class="str">'prefix'</span>       => <span class="fn">env</span>(<span class="str">'PZMONITOR_PREFIX'</span>, <span class="str">'pzmonitor:'</span>), <span class="cmt">// prefixo de toda chave</span>
+    <span class="str">'wait_timeout'</span> => (<span class="kw">int</span>) <span class="fn">env</span>(<span class="str">'PZMONITOR_WAIT_TIMEOUT'</span>, <span class="str">60</span>),
+    <span class="str">'lock_ttl'</span>     => (<span class="kw">int</span>) <span class="fn">env</span>(<span class="str">'PZMONITOR_LOCK_TTL'</span>, <span class="str">300</span>),
+];</code></pre>
+
+      <table>
+        <thead>
+          <tr><th>Variável</th><th>Padrão</th><th>Descrição</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>PZMONITOR_STORE</code></td>
+            <td><code>null</code></td>
+            <td>Store de cache dos locks. <code>null</code> usa o store padrão da aplicação. Em produção deve resolver para um backend compartilhado (Redis).</td>
+          </tr>
+          <tr>
+            <td><code>PZMONITOR_PREFIX</code></td>
+            <td><code>pzmonitor:</code></td>
+            <td>Prefixo aplicado a toda chave de lock, garantindo que as chaves do PzMonitor nunca colidam com outras chaves da aplicação.</td>
+          </tr>
+          <tr>
+            <td><code>PZMONITOR_WAIT_TIMEOUT</code></td>
+            <td><code>60</code></td>
+            <td>Segundos que <code>lock()</code> e <code>acquire()</code> esperam pela chave antes de lançar <code>PzMonitorTimeoutException</code>.</td>
+          </tr>
+          <tr>
+            <td><code>PZMONITOR_LOCK_TTL</code></td>
+            <td><code>300</code></td>
+            <td>Segundos até o cache expirar a chave sozinho, mesmo sem <code>release()</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Precedência dos tempos</h3>
+      <p>
+        Os parâmetros <code>$waitTimeoutInSeconds</code> e <code>$lockTtlInSeconds</code> resolvem em três níveis:
+        <strong>argumento da chamada &gt; <code>config/pzmonitor.php</code> &gt; padrão do pacote (60&nbsp;s / 300&nbsp;s)</strong>.
+        Omitir o argumento — ou passar <code>null</code> — cai para a config; um valor explícito vence a config,
+        inclusive numa aplicação que a customizou.
+      </p>
+
+<pre><code><span class="fn">PzMonitor</span>::<span class="fn">lock</span>(<span class="str">'fechamento-mensal'</span>, $callback);                        <span class="cmt">// usa a config</span>
+<span class="fn">PzMonitor</span>::<span class="fn">lock</span>(<span class="str">'fechamento-mensal'</span>, $callback, lockTtlInSeconds: <span class="str">1800</span>); <span class="cmt">// vence a config</span></code></pre>
+
+      <div class="callout callout-warn">
+        <strong>O <code>lock_ttl</code> da config é um piso, não uma solução.</strong>
+        O TTL adequado depende da duração de <em>cada rotina</em>, não da aplicação: fechamento de mês e
+        envio de e-mail não querem o mesmo número. Rotina longa deve passar o TTL explícito na chamada.
+      </div>
+    </section>
+
+    <!-- EXCEÇÕES -->
+    <section id="excecoes">
+      <h2>Exceções</h2>
+      <p>Todas em <code>Puzl\PzMonitor\Exception\</code>. Telas e logs da aplicação consumidora dependem desses textos e não devem ser traduzidos.</p>
+
+      <table>
+        <thead>
+          <tr><th>Exceção</th><th>Quando</th><th>Mensagem</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>PzMonitorException</code></td>
+            <td>Base abstrata da família; estende <code>\Exception</code> e expõe a propriedade readonly <code>uniqueProcessKey</code>.</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><code>PzMonitorBusyException</code></td>
+            <td><code>tryLock</code>, <code>tryLockMany</code> e <code>tryAcquire</code> com a chave ocupada.</td>
+            <td><code>Already exists process. Process {chave}</code></td>
+          </tr>
+          <tr>
+            <td><code>PzMonitorTimeoutException</code></td>
+            <td><code>lock</code> e <code>acquire</code> com a espera esgotada. <code>getPrevious()</code> devolve o <code>LockTimeoutException</code> do framework.</td>
+            <td><code>Maximum wait time reached. Process {chave}</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+<pre><code><span class="kw">use</span> <span class="cls">Puzl\PzMonitor\Exception\PzMonitorException</span>;
+
+<span class="kw">try</span> {
+    <span class="fn">PzMonitor</span>::<span class="fn">tryLock</span>(<span class="str">'minha-chave'</span>, $callback);
+} <span class="kw">catch</span> (<span class="cls">PzMonitorException</span> $e) {
+    <span class="cmt">// Captura busy e timeout de uma vez.</span>
+    <span class="fn">logger</span>()-><span class="fn">warning</span>($e-><span class="fn">getMessage</span>(), [<span class="str">'key'</span> => $e->uniqueProcessKey]);
+}</code></pre>
+
+      <p><code>tryLockMany()</code> lança ainda <code>InvalidArgumentException</code> quando a lista de chaves é vazia.</p>
+    </section>
+
+    <!-- LIMITES -->
+    <section id="limites">
+      <h2>Limites e avisos</h2>
+
+      <div class="callout callout-warn">
+        <div class="callout-title">TTL é rede de segurança, não watchdog</div>
+        O TTL (padrão <code>300</code>s) protege contra processo morto (<code>kill -9</code>, OOM). Se a seção crítica passar do TTL, o lock expira e outro processo entra — dimensione <code>$lockTtlInSeconds</code> pelo <strong>pior caso</strong> da operação.
+      </div>
+
+      <div class="callout callout-warn">
+        <div class="callout-title">Não reentrante</div>
+        Chamar um método do PzMonitor aninhado na mesma chave bloqueia até o timeout (<code>lock</code>/<code>acquire</code>) ou falha imediatamente (<code>tryLock</code>/<code>tryAcquire</code>). Reentrância está fora do escopo.
+      </div>
+
+      <div class="callout callout-danger">
+        <div class="callout-title">Exclusão real exige cache compartilhado</div>
+        A exclusão só vale entre processos que usam o mesmo store. <code>file</code> exclui apenas dentro de uma máquina; <code>array</code> apenas dentro do processo. Em produção, aponte para Redis.
+      </div>
+
+      <div class="callout callout-warn">
+        <div class="callout-title">Lock de eficiência, não de correção absoluta</div>
+        Sob failover de Redis single-instance, dupla aquisição é raramente possível (<a href="https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html" target="_blank" rel="noopener">Kleppmann</a>). Aceitável para os usos atuais; fluxos correção-críticos exigem outra abordagem.
+      </div>
+
+      <div class="callout callout-danger">
+        <div class="callout-title">Não configure <code>lock_connection</code></div>
+        Enquanto existir call site na aplicação, <code>config/cache.php</code> não deve definir <code>lock_connection</code> — o v1 depende da colisão de chave na conexão <code>cache</code>.
+      </div>
+
+      <h3>Fora do escopo (upgrade path, sem prazo)</h3>
+      <p>Watchdog de renovação de TTL, reentrância por contador de aquisições, fencing tokens / Redlock multi-nó, condition variables (<code>Wait</code>/<code>Pulse</code>) e métricas/eventos não fazem parte desta versão.</p>
+    </section>
+
+    <!-- BOAS PRÁTICAS -->
+    <section id="boas-praticas">
+      <h2>Boas práticas</h2>
+      <ul>
+        <li><strong>Chave por processo, não por classe.</strong> Inclua o identificador do recurso: <code>"emissao-nfe:{$pedidoId}"</code>, não <code>"emissao-nfe"</code>.</li>
+        <li><strong>Seção crítica curta.</strong> Deixe fora do callback tudo que não precisa de exclusividade (validação, montagem de payload).</li>
+        <li><strong>TTL pelo pior caso.</strong> Meça a operação mais lenta em produção e some folga.</li>
+        <li><strong>Trate a exceção onde ela significa algo.</strong> Busy geralmente é "já está rodando, ignore"; timeout geralmente é fila ou incidente.</li>
+        <li><strong>Handle cru sempre com <code>finally</code>.</strong> Sem isso, a chave só libera no TTL.</li>
+        <li><strong>Ordem fixa em multi-chave.</strong> Use <code>tryLockMany()</code> em vez de encadear <code>tryAcquire()</code> manualmente — a ordenação lexicográfica é o que evita deadlock entre lotes.</li>
+      </ul>
+    </section>
+
+    <!-- TESTES -->
+    <section id="testes">
+      <h2>Testes</h2>
+<pre><code>composer test
+composer test:coverage</code></pre>
+      <p>As suítes <code>Unit</code> e <code>Features</code> rodam no driver de cache <code>array</code> (<code>ArrayStore</code> implementa <code>LockProvider</code>) — sem Redis, Docker ou qualquer infraestrutura externa.</p>
+      <p>
+        A suíte <code>Integration</code> é a única que verifica a promessa central do pacote — exclusão mútua
+        <strong>entre processos</strong> — disparando processos PHP concorrentes contra um Redis real. Ela se
+        pula sozinha quando não há Redis alcançável, então localmente basta subir um:
+      </p>
+
+<pre><code>docker run -d --rm -p 6379:6379 redis:7-alpine
+composer test</code></pre>
+
+      <p>Variáveis: <code>REDIS_HOST</code>, <code>REDIS_PORT</code>, <code>REDIS_PASSWORD</code>. O workflow <code>.github/workflows/tests.yml</code> sobe o serviço em cada push e pull request, e <strong>falha se a suíte de integração for pulada</strong> — teste que não roda não protege nada.</p>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq">
+      <h2>Perguntas frequentes</h2>
+
+      <h3>Posso usar junto com outro Monitor da aplicação?</h3>
+      <p>Sim. O prefixo próprio (<code>pzmonitor:</code>) garante que as chaves nunca colidem. Migre por família de chave, nunca por arquivo.</p>
+
+      <h3>Por que a classe é 100% estática?</h3>
+      <p>Não há estado nem variação de motor: existe um único backend possível (<code>Cache::lock</code>). Adapter ou factory seriam abstração especulativa.</p>
+
+      <h3>O que acontece se o callback lançar exceção?</h3>
+      <p>O lock é liberado de qualquer forma (<code>finally</code>) e a exceção sobe para o caller sem alteração.</p>
+
+      <h3>Preciso de Redis para os testes?</h3>
+      <p>
+        Para as suítes <code>Unit</code> e <code>Features</code>, não: o driver <code>array</code> implementa
+        <code>LockProvider</code> e cobre toda a semântica da API num único processo. Para a suíte
+        <code>Integration</code>, sim — ela existe justamente porque o store <code>array</code> não prova exclusão
+        entre processos. Sem Redis ela se pula; no CI ela roda e o job falha se for pulada.
+      </p>
+
+      <h3>Onde está o código-fonte?</h3>
+      <p>
+        <code>src/PzMonitor.php</code> — API pública<br>
+        <code>src/Exception/</code> — família de exceções<br>
+        <code>src/Laravel/PzMonitorServiceProvider.php</code> — integração Laravel<br>
+        <code>config/pzmonitor.php</code> — configuração publicável<br>
+        <code>README.md</code> — referência rápida em Markdown
+      </p>
+    </section>
+
+    <footer>
+      <p>PzMonitor · <code>puzl/pzmonitor</code> · Documentação gerada para o repositório Puzl. Abra este arquivo no navegador: <code>docs/index.html</code></p>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+  // Highlight active nav link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.sidebar a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + entry.target.id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+
+  // Close mobile menu on link click
+  navLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      document.querySelector('.sidebar').classList.remove('open');
+    });
+  });
+</script>
+
+</body>
+</html>

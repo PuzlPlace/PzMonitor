@@ -1,0 +1,67 @@
+# Dependências (instalar com composer install)
+/vendor/
+vendor/
+
+# Pacote (biblioteca) não versiona o lock
+composer.lock
+
+# Cursor — ambiente local (não versionar)
+.cursor/plans/
+.cursor/rules/local.mdc
+
+# Claude — ambiente local
+.claude/settings.local.json
+
+# Planejamento e tarefas locais
+plans/
+tasks/
+
+# PHPUnit
+.phpunit.result.cache
+.phpunit.cache/
+/build/coverage/
+/coverage/
+coverage.xml
+*.cov
+
+# Composer (credenciais de repositórios privados)
+auth.json
+
+# Ambiente local
+.env
+.env.*
+!.env.example
+
+# IDEs e editores
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Ferramentas PHP (cache de análise/formatação)
+.php-cs-fixer.cache
+.phpstan/
+.phpstan.cache
+.psalm/
+infection.log
+
+# Logs e temporários
+*.log
+*.tmp
+*.temp
+.cache/
+
+# Node (ex.: MCP via npx no Cursor — não versionar deps locais)
+node_modules/
+
+# Pacotes / artefatos de build
+*.phar
+/dist/
