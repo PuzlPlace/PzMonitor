@@ -13,7 +13,7 @@ use Puzl\PzMonitor\Exception\PzMonitorBusyException;
 use Puzl\PzMonitor\Exception\PzMonitorTimeoutException;
 
 /**
- * Lock distribuído sobre `Cache::lock` do Laravel. 
+ * Lock distribuído sobre `Cache::lock` do Laravel.
  *
  * Wrapper fino e 100% estático: aquisição atômica, owner token por
  * instância e liberação owner-safe são todos do framework — nenhum
